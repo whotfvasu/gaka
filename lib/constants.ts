@@ -1,1 +1,1 @@
-
+export const WEBSITE_URL = 'https://gaka.vercel.app'
