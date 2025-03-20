@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Gaka - Personal website template',
+  title: 'Gaka - Portfolio website',
   description:
     'Gaka is a free and open-source personal website template built with Next.js 15, React 19 and Motion-Primitives.',
 }
