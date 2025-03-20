@@ -283,7 +283,7 @@ export default function Personal() {
           ))}
 
           {/* Resume button (if you want it) */}
-          <MagneticSocialLink link="/resume.pdf">
+          <MagneticSocialLink link="/Resume.pdf">
             Resume
           </MagneticSocialLink>
         </div>
