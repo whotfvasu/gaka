@@ -72,7 +72,7 @@ export const SMALL_WINS: SmallWin[] = [
     title: 'Won HSBC Hackathon 2025',
     description:
       'Worked on the problem statement for full stack financial dashboard platfrom and delivered the desired result that led to win and Internship at HSBC.',
-    image: '/HSBC.jpeg',
+    image: '/hsbc.png',
     date: 'Aug 2025',
     id: 'win1',
     link: 'https://github.com/example/repo/pull/123',
