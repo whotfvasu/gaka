@@ -1,0 +1,119 @@
+<Cover
+  src="../../webhooks.jpg"
+  alt="A diagram showing webhook delivery architecture"
+  caption="Building reliable webhook systems"
+  style="w-32"
+/>
+
+# How I'd Build a Scalable, Reliable Webhook Delivery System (Now That I Finally Understand It)
+
+So the other day I stumbled upon this problem: you have to send thousands (or even millions) of messages to thousands of users, and not just dump them fire-and-forget style. You need to make sure the messages actually reach the users, handle the failures, retry the ones that bounced, and track everything so you know what went where. Basically, you're trying to build a mini version of how Stripe or GitHub handles webhooks.
+
+Now I've worked with queues and APIs before, but putting it all together with retries, dead letter queues, monitoring, and graceful backoff—that's where things get real. So I dug in, built a toy system, broke it a few times, and here's how it all started to make sense.
+
+---
+
+## The Problem in Plain Words
+
+Let's say you have a backend system where users register their webhook URLs. You now have to send them messages (events, updates, whatever) reliably. One bad URL shouldn't crash the flow. You can't afford to lose messages silently either. And oh, some endpoints might be slow, some might timeout, and some might just hate you that day.
+
+You realize pretty quickly: this is not just an HTTP request issue. It's a system design problem.
+
+---
+
+## The Queue: Your New Best Friend
+
+First thing I learned was: don't send messages directly to webhooks in a loop. That will choke your server and make error handling a nightmare.
+
+Instead, you drop every message into a queue. RabbitMQ, Kafka, AWS SQS, anything that can buffer load. This queue acts like your "To-Do" list for outgoing messages. Each message in the queue includes stuff like the user ID, the message content, the webhook URL, and maybe a retry count.
+
+You've now decoupled the sender (your app) from the processor (your worker). Your backend is free to go, and the worker can take care of delivery.
+
+---
+
+## Worker: The Unsung Hero
+
+This is where the actual webhook delivery happens. A worker is a long-running process that continuously pulls messages from the queue and attempts to send them via HTTP to the webhook URL. If it gets a 2xx status, great, mark it as delivered, log it, move on.
+
+But if it fails—timeout, 5xx, 4xx—you don't just give up. You bump the retry count, calculate a new delay (maybe 2s, 4s, 8s, 16s, exponential backoff), and either requeue the message or send it to a retry queue that handles delayed retries.
+
+This retry strategy ensures you don't hammer a broken webhook 1000 times in a row and also don't flood your system with simultaneous retries.
+
+If a message fails after, say, 5 tries, just give up and move it to a Dead Letter Queue (DLQ). This is a fancy name for "things that didn't work even after several attempts." You can inspect them later, retry them manually, or just log them as errors.
+
+---
+
+## What About Monitoring?
+
+Here's the thing: even if all this is working perfectly, if you have no visibility into it, it's like driving a car with your eyes closed.
+
+I learned about this toolset that's become almost a default standard: **Prometheus and Grafana**. Prometheus acts like a hungry watchdog that keeps scraping metrics from your application (like how many messages succeeded, how many failed, retry counts, webhook latencies, etc.). Grafana, on the other hand, turns those boring metrics into gorgeous dashboards.
+
+Now your system starts to talk to you. "Hey, 200 messages failed in the last 10 minutes," or "Your queue size just exploded." You can even set up alerts. Send yourself an email or Slack notification when a threshold is crossed. Now you're no longer reacting to outages, you're anticipating them.
+
+---
+
+## The Metrics That Actually Matter
+
+When I implemented this, the following metrics gave me the most value:
+
+- **Total messages processed**
+- **Number of successful deliveries**
+- **Number of failed deliveries**
+- **Number of retries**
+- **Current queue size**
+- **Webhook response time**
+
+Every time the worker sends a message, it bumps the counters accordingly. You expose these metrics over an HTTP `/metrics` endpoint using a library like `prom-client` in Node.js. Prometheus scrapes that endpoint every few seconds. Grafana reads Prometheus data and lets you build all sorts of visualizations.
+
+It's weirdly satisfying to see your system perform like a live heartbeat monitor.
+
+---
+
+## Some Hard Lessons and Gotchas
+
+- **Don't forget idempotency.** If you retry a message and it hits the webhook twice, make sure the webhook consumer can handle duplicates gracefully. Use message IDs.
+
+- **Don't ack the message in the queue before it's successfully processed.** If your worker crashes after popping a message but before delivery, you've lost it.
+
+- **Think hard about rate limits.** If you're sending webhooks to third-party systems, they probably rate-limit you. You need throttling mechanisms and exponential backoff to avoid bans.
+
+- **Always store failed messages with full context** — message body, headers, status code, error reason, etc. Debugging becomes much easier.
+
+---
+
+## Putting It All Together
+
+Once I stitched all this—producer to queue to worker to retry to dead letter to monitoring—it just clicked. I could scale horizontally by running multiple workers. I could track the health of the system live. I could see patterns in failures. I had retry logic that didn't rely on a while loop. And best of all, I wasn't blindly trusting HTTP anymore.
+
+You could even go deeper: add a dashboard to manually replay failed messages, include tracing with OpenTelemetry, add alerting into Slack or PagerDuty, but even the basic version makes you feel like you've built something serious.
+
+---
+
+## Final Thoughts
+
+Honestly, what amazed me most wasn't the code. It was the philosophy behind the system. Everything is async. Everything is decoupled. Failure is expected, not exceptional. You're not trying to avoid failures; you're building around them.
+
+This kind of design forces you to think like an engineer, not just a coder. You stop writing "if webhook fails, try again" logic and start thinking about reliability, backpressure, observability, and resilience.
+
+And once you see it in action, it just feels right.
+
+---
+
+### Questions for Reflection
+
+- How do you handle failures in your current systems?
+- What monitoring tools do you use to track system health?
+- Have you ever built a reliable message delivery system?
+
+### Further Reading
+
+- [Building Resilient Systems](https://example.com/resilient-systems)
+- [Queue Design Patterns](https://example.com/queue-patterns)
+- [Monitoring Best Practices](https://example.com/monitoring-guide)
+
+---
+
+### Music for Coding
+
+Need focus music while building systems? Try _"Arrival"_ by Max Richter—perfect for deep architectural thinking.
