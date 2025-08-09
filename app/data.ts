@@ -65,6 +65,16 @@ export const MORE_PROJECTS: MoreProject[] = [
     link: 'https://github.com/whotfvasu/task-manager',
     github: 'https://github.com/whotfvasu/Exam-Seat-Planner',
   },
+  {
+    name: 'Wisp',
+    description:
+      'A modern, full-stack chat application built with the MERN stack and Vite. Wisp delivers real-time messaging, user authentication, and a clean, responsive interface designed for productivity and clarity. ',
+    tags: ['React', 'Node.js', 'MongoDB', 'Express'],
+    images: ['/wisp_1.png', '/wisp_2.png', '/wisp_3.png'],
+    id: 'more-project-2',
+    link: 'https://wisp-omega.vercel.app/',
+    github: 'https://github.com/whotfvasu/wisp',
+  },
 ]
 
 export const SMALL_WINS: SmallWin[] = [
